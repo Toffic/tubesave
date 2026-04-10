@@ -1,22 +1,22 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 import yt_dlp
 from flask_cors import CORS
 
 app = Flask(__name__)
 CORS(app)
 
-# ✅ ADD HOME ROUTE (fixes "/" Not Found)
+# ✅ HOMEPAGE (serves your index.html)
 @app.route('/')
-def home():
-    return "TubeSave API is running 🚀"
+def homepage():
+    return send_from_directory('.', 'index.html')
 
-# ✅ MAIN API ROUTE (POST only)
+
+# ✅ API ROUTE
 @app.route('/api/info', methods=['POST'])
 def get_video_info():
     try:
         data = request.get_json()
 
-        # safer handling
         if not data or 'url' not in data:
             return jsonify({"success": False, "error": "No URL provided"}), 400
 
@@ -33,8 +33,8 @@ def get_video_info():
             formats = []
             for f in info.get('formats', []):
                 if f.get('vcodec') != 'none' and f.get('acodec') != 'none':
-                    size_mb = None
 
+                    size_mb = None
                     if f.get('filesize'):
                         size_mb = round(f['filesize'] / (1024 * 1024), 1)
                     elif f.get('filesize_approx'):
@@ -60,6 +60,6 @@ def get_video_info():
         return jsonify({"success": False, "error": str(e)}), 500
 
 
-# ✅ REQUIRED FOR RENDER (Gunicorn entry point)
+# ✅ REQUIRED FOR RENDER
 if __name__ == '__main__':
     app.run()
