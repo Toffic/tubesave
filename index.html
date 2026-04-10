@@ -90,7 +90,7 @@
             `;
 
             try {
-                const res = await fetch('http://localhost:5000/api/info', {
+               const res = await fetch('https://tubesave-qref.onrender.com/api/info', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ url: url })
