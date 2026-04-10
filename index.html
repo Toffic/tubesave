@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TubeSave • YouTube Downloader</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+    <style>
+        /* Same beautiful styles from before */
+        body { font-family: 'Inter', system-ui, sans-serif; }
+        .logo-font { font-family: 'Space Grotesk', sans-serif; }
+        .hero-bg { background: linear-gradient(135deg, #0f172a 0%, #1e2937 100%); }
+        .input-focus:focus { box-shadow: 0 0 0 4px rgba(34, 211, 238, 0.3); border-color: rgb(34 211 238); }
+        .download-btn { background: linear-gradient(90deg, #22d3ee, #06b67f); }
+    </style>
+</head>
+<body class="bg-zinc-950 text-white min-h-screen">
+
+    <!-- Navbar (same as before) ... -->
+
+    <div class="pt-24 pb-12 hero-bg">
+        <div class="max-w-4xl mx-auto px-6 text-center">
+            <h1 class="text-6xl font-bold tracking-tighter logo-font leading-none mb-6">
+                Download YouTube Videos<br>
+                <span class="bg-gradient-to-r from-cyan-300 to-emerald-400 bg-clip-text text-transparent">Instantly & Free</span>
+            </h1>
+
+            <div class="max-w-2xl mx-auto">
+                <div class="bg-zinc-900 border border-zinc-700 rounded-3xl p-2">
+                    <div class="flex items-center gap-x-3 bg-black rounded-3xl p-2">
+                        <input id="youtube-url" 
+                               type="text" 
+                               placeholder="Paste YouTube link here..."
+                               class="input-focus flex-1 bg-transparent border-0 focus:ring-0 px-6 py-5 text-base outline-none placeholder-zinc-500">
+                        
+                        <button onclick="fetchVideoInfo()" 
+                                class="download-btn px-10 py-5 rounded-3xl font-semibold text-black flex items-center gap-x-3 hover:scale-105 transition-all">
+                            <i class="fa-solid fa-download"></i>
+                            <span>Get Video</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Result Section (same as before) -->
+    <div id="result-section" class="hidden max-w-5xl mx-auto px-6 py-12">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-10">
+            <div class="lg:col-span-5">
+                <div class="video-card bg-zinc-900 rounded-3xl overflow-hidden border border-zinc-700">
+                    <div class="aspect-video bg-black relative">
+                        <img id="thumbnail" class="w-full h-full object-cover" alt="thumbnail">
+                        <div class="absolute bottom-3 right-3 bg-black/80 text-xs px-3 py-1 rounded-full">
+                            <span id="duration"></span>
+                        </div>
+                    </div>
+                    <div class="p-6">
+                        <h2 id="video-title" class="font-semibold text-xl leading-tight mb-2"></h2>
+                        <div id="channel" class="text-zinc-400 text-sm"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lg:col-span-7">
+                <div class="bg-zinc-900 border border-zinc-700 rounded-3xl p-8">
+                    <h3 class="text-2xl font-semibold mb-8">Available Formats</h3>
+                    
+                    <div id="formats-container" class="space-y-4"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function fetchVideoInfo() {
+            const url = document.getElementById('youtube-url').value.trim();
+            if (!url) return alert("Paste a YouTube link!");
+
+            const resultSection = document.getElementById('result-section');
+            resultSection.classList.remove('hidden');
+
+            // Show loading
+            document.getElementById('formats-container').innerHTML = `
+                <div class="text-center py-12">
+                    <i class="fa-solid fa-spinner fa-spin text-4xl text-cyan-400"></i>
+                    <p class="mt-4 text-zinc-400">Fetching video info with yt-dlp...</p>
+                </div>
+            `;
+
+            try {
+                const res = await fetch('http://localhost:5000/api/info', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: url })
+                });
+
+                const data = await res.json();
+
+                if (!data.success) throw new Error(data.error || "Failed to fetch info");
+
+                // Fill UI
+                document.getElementById('thumbnail').src = data.thumbnail;
+                document.getElementById('video-title').textContent = data.title;
+                document.getElementById('duration').textContent = data.duration;
+                document.getElementById('channel').innerHTML = `<span>${data.channel}</span>`;
+
+                // Render formats
+                const container = document.getElementById('formats-container');
+                container.innerHTML = '';
+
+                // Video formats
+                data.formats.forEach(f => {
+                    const div = document.createElement('div');
+                    div.className = "flex justify-between items-center bg-zinc-800 rounded-2xl p-5 hover:bg-zinc-700 transition-colors";
+                    div.innerHTML = `
+                        <div>
+                            <span class="font-medium">${f.quality} ${f.ext}</span>
+                            <span class="ml-3 text-xs text-zinc-400">${f.filesize || '≈'} MB</span>
+                        </div>
+                        <button onclick="startDownload('${f.url}', '${data.title}.${f.ext}')" 
+                                class="px-8 py-3 bg-white text-black rounded-2xl font-medium hover:bg-emerald-400 transition-all">
+                            Download
+                        </button>
+                    `;
+                    container.appendChild(div);
+                });
+
+            } catch (err) {
+                alert("Error: " + err.message);
+            }
+        }
+
+        function startDownload(downloadUrl, filename) {
+            const a = document.createElement('a');
+            a.href = downloadUrl;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+        }
+    </script>
+</body>
+</html>
